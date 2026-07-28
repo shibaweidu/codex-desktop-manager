@@ -9,12 +9,16 @@ use the upstream R2/S3 mirrors or Apple signing pipeline.
    and updater bundles without a GitHub login.
 2. In the GitHub repository, open **Settings > Secrets and variables > Actions**.
 3. Create the repository secret `TAURI_SIGNING_PRIVATE_KEY` with the complete
-   contents of the private updater key created for this fork. Never commit that
-   file or share it in a release.
+   contents of the private updater key created for this fork.
+4. Create the repository secret `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` with the
+   password for that private key. Never commit either secret or share either in
+   a release.
 
 The public half of this key is compiled into `src-tauri/tauri.conf.json` and is
 safe to commit. Its private half is stored locally at
-`C:\Users\Administrator\.tauri\codex-desktop-manager-update.key`.
+`C:\Users\Administrator\.tauri\codex-desktop-manager-update-v2.key`. Its
+password is stored locally alongside it in
+`C:\Users\Administrator\.tauri\codex-desktop-manager-update-v2.password`.
 
 ## Publish a release
 

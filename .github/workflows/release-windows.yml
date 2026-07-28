@@ -39,22 +39,28 @@ jobs:
       - name: Build Windows installer
         run: npm run tauri:build -- --bundles nsis
 
-      - name: Prepare GitHub Release assets
-        shell: pwsh
+      - name: Sign Windows updater installer
+        shell: bash
+        timeout-minutes: 5
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          installers=(src-tauri/target/release/bundle/nsis/*-setup.exe)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "::error::expected one x64 NSIS installer, found ${#installers[@]}" >&2
+            exit 1
+          fi
+          npx tauri signer sign "${installers[0]}"
+
+      - name: Prepare GitHub Release assets
+        shell: pwsh
         run: |
           $assets = "release-assets"
           $bundle = "src-tauri/target/release/bundle/nsis"
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
-          $installers = @(Get-ChildItem "$bundle/*-setup.exe")
-          if ($installers.Count -ne 1) {
-            throw "Expected one x64 NSIS installer, found $($installers.Count)."
-          }
-          foreach ($installer in $installers) {
-            & .\node_modules\.bin\tauri.cmd signer sign $installer.FullName
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
           $files = @(
             Get-ChildItem "$bundle/*-setup.exe"
             Get-ChildItem "$bundle/*-setup.exe.sig"

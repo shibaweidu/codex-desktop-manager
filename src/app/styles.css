@@ -1683,6 +1683,34 @@ button.themecard-art:focus-visible {
   line-height: 1.55;
   max-width: 30ch;
 }
+.kaola-api-hero {
+  padding-bottom: var(--space-sm);
+}
+.kaola-api-icon {
+  width: 92px;
+  height: 92px;
+  margin-bottom: var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-top);
+  box-shadow: var(--elev-2);
+}
+.kaola-api-description {
+  max-width: 330px;
+  margin-top: 10px;
+  color: var(--text-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  text-align: start;
+}
+.kaola-api-description p + p {
+  margin-top: var(--space-xs);
+}
+.kaola-api-description strong {
+  color: var(--text);
+  font-weight: 700;
+}
 
 /* "查看详情" disclosure under the error hero — keeps the raw engine/curl text
    reachable for bug reports without letting it shout at every user. */
@@ -1772,6 +1800,14 @@ button.themecard-art:focus-visible {
   padding: 11px 14px;
   border-radius: var(--r-md);
   font-size: var(--fs-body);
+}
+.kaola-api-link {
+  grid-column: 1 / -1;
+}
+.home-recheck {
+  display: flex;
+  justify-content: center;
+  margin-top: calc(var(--space-sm) * -1);
 }
 .btn {
   appearance: none;

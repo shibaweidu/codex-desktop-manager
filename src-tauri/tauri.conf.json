@@ -86,10 +86,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIxQThDQzg4QjlFNjE5QTEKUldTaEdlYTVpTXlvSWNQYVRHMjRNQmtLQ25HdE1aV2FoY0hLSldsZHpHM3NMYkJHMk8zVDR0WDEK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2NkYwOUZBQTFDQzk3RkQKUldUOWw4eWgrZ2x2MWpzb2NPOFRhdEVnQUg0cDdRNVVhUkZpanIvWXkzN2xLYTlOZ0hyTnYyeFkK",
       "endpoints": [
-        "https://codexapp.agentsmirror.com/manager/latest.json",
-        "https://github.com/Wangnov/Codex-App-Manager/releases/latest/download/latest.json"
+        "https://github.com/shibaweidu/codex-desktop-manager/releases/latest/download/latest.json"
       ]
     }
   }

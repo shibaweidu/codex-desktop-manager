@@ -97,6 +97,9 @@ jobs:
   # Every field is copied through the environment so event data is never
   # interpolated into shell source.
   preflight:
+    # Forks publish through release-windows.yml and do not inherit this
+    # upstream-only mirror, signing and protected-environment pipeline.
+    if: ${{ github.repository == 'Wangnov/Codex-App-Manager' }}
     runs-on: ubuntu-latest
     permissions: {}
     outputs:

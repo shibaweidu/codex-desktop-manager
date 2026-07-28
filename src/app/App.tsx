@@ -13,8 +13,9 @@ import { About } from "./views/About";
 import { Uninstall } from "./views/Uninstall";
 import { CodexConfig } from "./views/CodexConfig";
 import { CodexThemes } from "./views/CodexThemes";
+import { KaoLaApi } from "./views/KaoLaApi";
 
-type View = "home" | "settings" | "about" | "uninstall" | "config" | "themes";
+type View = "home" | "settings" | "about" | "uninstall" | "config" | "themes" | "kaola";
 
 function focusPageTarget(root: ParentNode | null) {
   if (!root) return;
@@ -69,7 +70,7 @@ function Shell() {
           Settings section. Jumping home reuses the same cross-fade as the
           NavBar back path so the two routes feel identical. */}
       <Rail
-        section={view === "home" ? "home" : view === "themes" ? "themes" : "settings"}
+        section={view === "home" ? "home" : view === "themes" ? "themes" : view === "kaola" ? "kaola" : "settings"}
         onNavigate={(section) => {
           const target: View = section;
           if (target === view) return;
@@ -94,6 +95,11 @@ function Shell() {
       {view === "themes" ? (
         <div data-view="themes" style={{ display: "contents" }}>
           <CodexThemes onBack={() => setView("settings")} />
+        </div>
+      ) : null}
+      {view === "kaola" ? (
+        <div data-view="kaola" style={{ display: "contents" }}>
+          <KaoLaApi onBack={() => withViewTransition(() => setView("home"))} />
         </div>
       ) : null}
       {view === "about" ? (

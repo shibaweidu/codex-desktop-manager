@@ -33,6 +33,7 @@ import {
   type ManualExistingCandidate,
 } from "./ManualExistingInstall";
 import { ProgressScreen, type PausedDownload } from "./ProgressScreen";
+import { KaoLaApiLink } from "../components/KaoLaApiLink";
 import { useDownloadProgress } from "./useDownloadProgress";
 import { useFocusRecheck, installIdentity } from "./useFocusRecheck";
 import { useOperationReattach } from "./useOperationReattach";
@@ -746,6 +747,15 @@ function MacHome({ onOpenSettings }: { onOpenSettings: () => void }) {
           )}
         </section>
 
+        {!rechecking && kind === "uptodate" ? (
+          <div className="home-recheck">
+            <button className="btn ghost" onClick={check} disabled={busy !== null}>
+              <Icon name="refresh" />
+              {t("home.recheck")}
+            </button>
+          </div>
+        ) : null}
+
         {/* Installed-version details — the version/date/path share one hierarchy. */}
         {installed && (rechecking || kind !== "loading") ? (
           <div className="list meta">
@@ -876,16 +886,10 @@ function MacHome({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           ) : null}
           {!rechecking && kind === "uptodate" ? (
-            <>
-              <button className="btn primary big" onClick={onLaunch} disabled={busy !== null}>
-                <CodexGlyph />
-                {t("home.launch")}
-              </button>
-              <button className="btn ghost" onClick={check} disabled={busy !== null}>
-                <Icon name="refresh" />
-                {t("home.recheck")}
-              </button>
-            </>
+            <button className="btn primary big" onClick={onLaunch} disabled={busy !== null}>
+              <CodexGlyph />
+              {t("home.launch")}
+            </button>
           ) : null}
           {/* "请稍后重试" must come with a way to retry. When Codex is installed
               the user can still launch it despite the failed check. */}
@@ -908,6 +912,7 @@ function MacHome({ onOpenSettings }: { onOpenSettings: () => void }) {
               </button>
             )
           ) : null}
+          <KaoLaApiLink />
         </div>
 
         {/* Also offered on non-ambiguous "external" (on ambiguity the picker

@@ -32,6 +32,7 @@ import {
   type ManualExistingCandidate,
 } from "./ManualExistingInstall";
 import { ProgressScreen, type PausedDownload } from "./ProgressScreen";
+import { KaoLaApiLink } from "../components/KaoLaApiLink";
 import { useDownloadProgress } from "./useDownloadProgress";
 import { useFocusRecheck, installIdentity } from "./useFocusRecheck";
 import { useOperationReattach } from "./useOperationReattach";
@@ -1079,6 +1080,15 @@ export function WinHome({ onOpenSettings }: { onOpenSettings: () => void }) {
           )}
         </section>
 
+        {!rechecking && !provenanceRecoveryPending && kind === "uptodate" ? (
+          <div className="home-recheck">
+            <button className="btn ghost" onClick={check} disabled={busy !== null}>
+              <Icon name="refresh" />
+              {t("home.recheck")}
+            </button>
+          </div>
+        ) : null}
+
         {/* Installed-version details — the version/date/path share one hierarchy. */}
         {installed && (rechecking || kind !== "loading") ? (
           <div className="list meta">
@@ -1212,13 +1222,7 @@ export function WinHome({ onOpenSettings }: { onOpenSettings: () => void }) {
             </button>
           ) : null}
           {!rechecking && !provenanceRecoveryPending && kind === "uptodate" ? (
-            <>
-              {launchButton("primary")}
-              <button className="btn ghost" onClick={check} disabled={busy !== null}>
-                <Icon name="refresh" />
-                {t("home.recheck")}
-              </button>
-            </>
+            launchButton("primary")
           ) : null}
           {/* "请稍后重试" must come with a way to retry. When Codex is installed
               the user can still launch it despite the failed check. */}
@@ -1238,6 +1242,7 @@ export function WinHome({ onOpenSettings }: { onOpenSettings: () => void }) {
               </button>
             )
           ) : null}
+          <KaoLaApiLink />
         </div>
 
         {!rechecking && kind === "none" ? (

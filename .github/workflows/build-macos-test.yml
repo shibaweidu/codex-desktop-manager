@@ -6,7 +6,7 @@ on:
     tags: ["macos-test-v*"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -61,3 +61,17 @@ jobs:
           path: macos-test-artifacts/*.dmg
           if-no-files-found: error
           retention-days: 14
+
+      - name: Resolve release tag
+        id: release
+        if: startsWith(github.ref, 'refs/tags/macos-test-v')
+        shell: bash
+        run: echo "tag=${GITHUB_REF_NAME#macos-test-}" >> "$GITHUB_OUTPUT"
+
+      - name: Add test package to release downloads
+        if: startsWith(github.ref, 'refs/tags/macos-test-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          files: macos-test-artifacts/*.dmg
+          fail_on_unmatched_files: true

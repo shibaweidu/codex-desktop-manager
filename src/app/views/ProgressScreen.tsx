@@ -87,7 +87,7 @@ export function ProgressScreen({
     : finishing
       ? t("progress.finishing")
       : snap
-        ? t("progress.downloadingFrom", { source: snap.source })
+        ? t("progress.downloading")
         : t("progress.preparing");
 
   return (

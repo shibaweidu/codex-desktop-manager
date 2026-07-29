@@ -1163,6 +1163,9 @@ button.themecard-art:focus-visible {
 .topbar .spacer {
   flex: 1;
 }
+:root[data-window-mode="expanded"] .topbar > :is(.mark, .wordmark) {
+  display: none;
+}
 .iconbtn {
   width: 30px;
   height: 30px;

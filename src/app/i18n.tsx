@@ -235,6 +235,7 @@ const ZH = {
 
   "progress.title": "正在更新…",
   "progress.installing": "正在安装…",
+  "progress.downloading": "正在下载…",
   "progress.downloadingFrom": "正在从 {source} 下载",
   "progress.preparing": "正在准备…",
   "progress.pause": "暂停",
@@ -639,6 +640,7 @@ const EN: Record<Key, string> = {
 
   "progress.title": "Updating…",
   "progress.installing": "Installing…",
+  "progress.downloading": "Downloading…",
   "progress.downloadingFrom": "Downloading from {source}",
   "progress.preparing": "Preparing…",
   "progress.pause": "Pause",
@@ -1040,6 +1042,7 @@ const FR: Record<Key, string> = {
 
   "progress.title": "Mise à jour en cours…",
   "progress.installing": "Installation…",
+  "progress.downloading": "Téléchargement…",
   "progress.downloadingFrom": "Téléchargement depuis {source}",
   "progress.preparing": "Préparation…",
   "progress.pause": "Pause",
@@ -1442,6 +1445,7 @@ const ZH_TW: Record<Key, string> = {
 
   "progress.title": "更新中…",
   "progress.installing": "安裝中…",
+  "progress.downloading": "正在下載…",
   "progress.downloadingFrom": "正在從 {source} 下載",
   "progress.preparing": "準備中…",
   "progress.pause": "暫停",
@@ -1854,6 +1858,7 @@ const DE: Record<Key, string> = {
 
   "progress.title": "Wird aktualisiert…",
   "progress.installing": "Wird installiert…",
+  "progress.downloading": "Wird heruntergeladen…",
   "progress.downloadingFrom": "Download von {source}",
   "progress.preparing": "Wird vorbereitet…",
   "progress.pause": "Pausieren",
@@ -2266,6 +2271,7 @@ const KO: Record<Key, string> = {
 
   "progress.title": "업데이트 중…",
   "progress.installing": "설치 중…",
+  "progress.downloading": "다운로드 중…",
   "progress.downloadingFrom": "{source}에서 다운로드 중",
   "progress.preparing": "준비 중…",
   "progress.pause": "일시 중지",
@@ -2670,6 +2676,7 @@ const JA: Record<Key, string> = {
   "close.blocked.ok": "了解",
   "progress.title": "アップデート中…",
   "progress.installing": "インストール中…",
+  "progress.downloading": "ダウンロード中…",
   "progress.downloadingFrom": "{source} からダウンロード中",
   "progress.preparing": "準備中…",
   "progress.pause": "一時停止",
@@ -3062,6 +3069,7 @@ const RU: Record<Key, string> = {
   "close.blocked.ok": "Понятно",
   "progress.title": "Обновление…",
   "progress.installing": "Установка…",
+  "progress.downloading": "Загрузка…",
   "progress.downloadingFrom": "Загрузка из {source}",
   "progress.preparing": "Подготовка…",
   "progress.pause": "Пауза",
@@ -3454,6 +3462,7 @@ const AR: Record<Key, string> = {
   "close.blocked.ok": "حسناً",
   "progress.title": "جارٍ التحديث…",
   "progress.installing": "جارٍ التثبيت…",
+  "progress.downloading": "جارٍ التنزيل…",
   "progress.downloadingFrom": "جارٍ التنزيل من {source}",
   "progress.preparing": "جارٍ التحضير…",
   "progress.pause": "إيقاف مؤقت",
@@ -3846,6 +3855,7 @@ const ES: Record<Key, string> = {
   "close.blocked.ok": "Entendido",
   "progress.title": "Actualizando…",
   "progress.installing": "Instalando…",
+  "progress.downloading": "Descargando…",
   "progress.downloadingFrom": "Descargando desde {source}",
   "progress.preparing": "Preparando…",
   "progress.pause": "Pausar",
@@ -4238,6 +4248,7 @@ const PT_BR: Record<Key, string> = {
   "close.blocked.ok": "Entendi",
   "progress.title": "Atualizando…",
   "progress.installing": "Instalando…",
+  "progress.downloading": "Baixando…",
   "progress.downloadingFrom": "Baixando de {source}",
   "progress.preparing": "Preparando…",
   "progress.pause": "Pausar",

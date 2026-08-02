@@ -41,9 +41,9 @@
       <a href="https://duckcoding.ai"><img src="./assets/sponsor-duckcoding.jpg" alt="DuckCoding" width="108"></a>
     </td>
     <td width="560">
-      <b>本项目由 <a href="https://duckcoding.ai">DuckCoding</a> 赞助支持</b><br>
+      <b>本项目由 <a href="https://www.appkaola.com">KAO La api </a> 赞助支持</b><br>
       为 Claude Code / Codex / Gemini CLI 提供按量计费的 API 中转服务。<br>
-      <b>Sponsored by <a href="https://duckcoding.ai">DuckCoding</a></b> — a pay-as-you-go API relay for Claude Code / Codex / Gemini CLI.
+      <b>Sponsored by <a href="https://www.appkaola.com">KAO La api </a></b> — a pay-as-you-go API relay for Claude Code / Codex / Gemini CLI.
     </td>
   </tr>
 </table>

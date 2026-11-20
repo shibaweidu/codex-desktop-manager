@@ -32,10 +32,12 @@ pub enum AppError {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ErrorKind {
     Network,
+    RateLimit,
     Timeout,
     DiskSpace,
     DiskWrite,
     Permission,
+    InstallDirectoryUnavailable,
     Signature,
     Artifact,
     Incompatible,
@@ -51,10 +53,12 @@ impl ErrorKind {
     pub fn as_code(self) -> &'static str {
         match self {
             Self::Network => "network",
+            Self::RateLimit => "rate_limit",
             Self::Timeout => "timeout",
             Self::DiskSpace => "disk_space",
             Self::DiskWrite => "disk_write",
             Self::Permission => "permission",
+            Self::InstallDirectoryUnavailable => "install_directory_unavailable",
             Self::Signature => "signature",
             Self::Artifact => "artifact",
             Self::Incompatible => "incompatible",
@@ -86,6 +90,10 @@ fn curl_exit_code(message: &str) -> Option<i32> {
 pub fn classify(message: &str) -> ErrorKind {
     let m = message.to_lowercase();
 
+    if m.contains("github api rate limit exceeded") {
+        return ErrorKind::RateLimit;
+    }
+
     if m.contains("download cancelled") || m.contains("cancelled") {
         return ErrorKind::Cancelled;
     }
@@ -97,6 +105,9 @@ pub fn classify(message: &str) -> ErrorKind {
         || m.contains("磁盘空间")
     {
         return ErrorKind::DiskSpace;
+    }
+    if m.contains("portable install directory unavailable") {
+        return ErrorKind::InstallDirectoryUnavailable;
     }
     if m.contains("access is denied")
         || m.contains("permission denied")
@@ -205,13 +216,22 @@ impl From<OperationError> for AppError {
 pub struct CommandError {
     pub code: String,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub retry_after_unix: Option<u64>,
 }
 
 impl From<AppError> for CommandError {
     fn from(value: AppError) -> Self {
+        let message = value.to_string();
+        let retry_after_unix = if value.code() == "rate_limit" {
+            message.split("retry_after_unix=").nth(1)
+                .and_then(|tail| tail.split(';').next())
+                .and_then(|number| number.parse().ok())
+        } else { None };
         Self {
             code: value.code().to_string(),
-            message: value.to_string(),
+            message,
+            retry_after_unix,
         }
     }
 }
@@ -222,6 +242,16 @@ mod tests {
 
     fn code_of(message: &str) -> &'static str {
         AppError::Engine(message.to_string()).code()
+    }
+
+    #[test]
+    fn github_rate_limit_is_distinct_and_preserves_reset_time() {
+        let error = CommandError::from(AppError::Engine(
+            "io error: GitHub API rate limit exceeded; retry_after_unix=1800000000; retry in 60 seconds".into()));
+        assert_eq!(error.code, "rate_limit");
+        assert_eq!(error.retry_after_unix, Some(1800000000));
+        assert_eq!(serde_json::to_value(&error).unwrap()["retryAfterUnix"], 1800000000u64);
+        assert_eq!(code_of("curl failed for host=api.github.com exit=22: stderr='403 Forbidden'"), "artifact");
     }
 
     #[test]
@@ -270,6 +300,18 @@ mod tests {
             ),
             ErrorKind::Permission
         );
+    }
+
+    #[test]
+    fn portable_directory_failure_has_specific_recovery_even_for_access_denied() {
+        for detail in ["Access is denied. (os error 5)", "拒绝访问。 (os error 5)", "os error 32", "os error 33"] {
+            let message = format!(
+                "io error: portable install directory unavailable: move current install to rollback; \
+                 source=\"C:\\Codex\"; destination=\"C:\\Codex.rollback\"; {detail}"
+            );
+            assert_eq!(code_of(&message), "install_directory_unavailable");
+        }
+        assert_eq!(code_of("Access is denied. (os error 5)"), "permission");
     }
 
     #[test]

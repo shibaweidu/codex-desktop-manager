@@ -641,6 +641,7 @@ fn curl_fetch_attempt(
     max_bytes: &str,
     timeout_secs: &str,
     schannel_best_effort: bool,
+    proxy_args: &[String],
 ) -> Result<std::process::Output, AppError> {
     let mut command = curl_command();
     #[cfg(target_os = "windows")]
@@ -650,6 +651,7 @@ fn curl_fetch_attempt(
     #[cfg(not(target_os = "windows"))]
     let _ = schannel_best_effort;
     command
+        .args(proxy_args)
         .args([
             "-sSfL",
             "--proto",
@@ -678,25 +680,34 @@ fn curl_supports_schannel_best_effort() -> bool {
         })
 }
 
+/// Schannel could not determine revocation status: the CRL/OCSP endpoint is
+/// offline (0x80092013), or the chain carries no usable revocation information,
+/// as with TLS-inspecting corporate proxies (0x80092012). The best-effort retry
+/// ignores exactly these two states; a revoked certificate still fails.
 #[cfg(any(target_os = "windows", test))]
-fn is_schannel_revocation_offline(exit_code: Option<i32>, stderr: &[u8]) -> bool {
-    let stderr = String::from_utf8_lossy(stderr);
+fn is_schannel_revocation_check_failure(exit_code: Option<i32>, stderr: &[u8]) -> bool {
+    let stderr = String::from_utf8_lossy(stderr).to_ascii_lowercase();
     exit_code == Some(35)
-        && (stderr.contains("CRYPT_E_REVOCATION_OFFLINE") || stderr.contains("0x80092013"))
+        && (stderr.contains("crypt_e_revocation_offline")
+            || stderr.contains("0x80092013")
+            || stderr.contains("crypt_e_no_revocation_check")
+            || stderr.contains("0x80092012"))
 }
 
 fn curl_fetch(url: &str, max_bytes: &str, timeout_secs: &str) -> Result<Vec<u8>, AppError> {
-    let output = curl_fetch_attempt(url, max_bytes, timeout_secs, false)?;
+    // The catalog follows the same Settings > Network choice as update checks.
+    let proxy_args = crate::app::network::curl_proxy_args(&AppSettings::load())?;
+    let output = curl_fetch_attempt(url, max_bytes, timeout_secs, false, &proxy_args)?;
     #[cfg(target_os = "windows")]
     let output = if !output.status.success()
-        && is_schannel_revocation_offline(output.status.code(), &output.stderr)
+        && is_schannel_revocation_check_failure(output.status.code(), &output.stderr)
     {
         if curl_supports_schannel_best_effort() {
             log::warn!(
-                "theme catalog Schannel revocation endpoint unavailable; retrying best-effort url={}",
+                "theme catalog Schannel revocation check unavailable; retrying best-effort url={}",
                 crate::app::logging::redact_url(url)
             );
-            curl_fetch_attempt(url, max_bytes, timeout_secs, true)?
+            curl_fetch_attempt(url, max_bytes, timeout_secs, true, &proxy_args)?
         } else {
             log::warn!(
                 "theme catalog Schannel revocation endpoint unavailable and curl lacks safe retry support url={}",
@@ -1513,9 +1524,9 @@ fn launch_codex_plain() -> Result<(), AppError> {
 #[cfg(target_os = "windows")]
 fn windows_domain_settings() -> crate::domain::settings::AppSettings {
     let saved = AppSettings::load();
-    let mut settings =
-        crate::domain::settings::AppSettings::new(String::new(), saved.install_root);
+    let mut settings = crate::domain::settings::AppSettings::new(String::new(), saved.install_root);
     settings.disable_codex_self_updates = saved.disable_codex_self_updates;
+    settings.codex_launch_arguments = saved.codex_launch_arguments;
     settings
 }
 
@@ -1573,9 +1584,17 @@ fn launch_codex_with_cdp(
         codex_win_engine::LaunchOptions {
             disable_codex_self_updates: disable_self_updates,
             remote_debugging_port: Some(port),
+            additional_arguments: &AppSettings::load().codex_launch_arguments,
         },
     )
-    .map_err(|e| AppError::Engine(format!("以调试模式打开 Codex 失败: {e}")))
+    .map_err(|e| AppError::Engine(format!("以调试模式打开 Codex 失败: {e}")))?;
+    let settings = windows_domain_settings();
+    if !settings.codex_launch_arguments.is_empty() {
+        if let Err(error) = crate::app::win_update::sync_launch_shortcut(&settings) {
+            log::warn!("Themed Codex launched but shortcut refresh failed: {error}");
+        }
+    }
+    Ok(())
 }
 
 #[cfg(target_os = "windows")]
@@ -1638,14 +1657,24 @@ pub async fn launch_with_active_theme(
 
 #[cfg(test)]
 mod catalog_network_tests {
-    use super::is_schannel_revocation_offline;
+    use super::is_schannel_revocation_check_failure;
 
     #[test]
-    fn detects_only_the_windows_revocation_offline_tls_error() {
-        let stderr = b"curl: (35) schannel: CRYPT_E_REVOCATION_OFFLINE (0x80092013)";
-        assert!(is_schannel_revocation_offline(Some(35), stderr));
-        assert!(!is_schannel_revocation_offline(Some(6), stderr));
-        assert!(!is_schannel_revocation_offline(
+    fn detects_only_the_windows_revocation_check_tls_errors() {
+        for stderr in [
+            &b"curl: (35) schannel: CRYPT_E_REVOCATION_OFFLINE (0x80092013)"[..],
+            &b"curl: (35) schannel: next InitializeSecurityContext failed: CRYPT_E_NO_REVOCATION_CHECK (0x80092012)"[..],
+            &b"curl: (35) schannel: failed: 0x80092012"[..],
+        ] {
+            assert!(is_schannel_revocation_check_failure(Some(35), stderr));
+            assert!(!is_schannel_revocation_check_failure(Some(6), stderr));
+        }
+        // An actually revoked certificate or an untrusted root must not retry.
+        assert!(!is_schannel_revocation_check_failure(
+            Some(35),
+            b"curl: (35) schannel: CRYPT_E_REVOKED (0x80092010)"
+        ));
+        assert!(!is_schannel_revocation_check_failure(
             Some(35),
             b"curl: (35) schannel: SEC_E_UNTRUSTED_ROOT"
         ));

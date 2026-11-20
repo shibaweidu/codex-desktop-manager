@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source_dir="src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+          source_dir="target/${{ matrix.target }}/release/bundle/macos"
           app="$(find "$source_dir" -maxdepth 1 -name '*.app' -print -quit)"
           test -n "$app"
           mkdir -p macos-test-artifacts

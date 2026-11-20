@@ -516,6 +516,25 @@ export function Settings({
                 </div>
               ) : null}
             </div>
+            <div className="list">
+              <div className="row" style={{ display: "block" }}>
+                <label className="rtitle" htmlFor={`${switchId}-launch-arguments`}>
+                  {t("settings.windows.launchArguments")}
+                </label>
+                <span className="rsub" style={{ display: "block", marginBottom: 8 }}>
+                  {t("settings.windows.launchArgumentsDesc")}
+                </span>
+                <input
+                  id={`${switchId}-launch-arguments`}
+                  className="input mono"
+                  value={s.codexLaunchArguments}
+                  maxLength={16384}
+                  placeholder="--proxy-server=http://127.0.0.1:7890"
+                  onChange={(event) => setDraft({ ...s, codexLaunchArguments: event.target.value })}
+                  onBlur={(event) => update({ ...s, codexLaunchArguments: event.currentTarget.value })}
+                />
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -708,6 +727,21 @@ export function Settings({
                   setCommandError(null);
                   setFieldError(null);
                   update({ ...s, confirmClose: v });
+                }}
+              />
+            </div>
+            <div className="row">
+              <span className="rtext">
+                <span className="rtitle" id={`${switchId}-minimizetotray`}>{t("settings.general.minimizeToTray")}</span>
+                <span className="rsub">{t("settings.general.minimizeToTrayNote")}</span>
+              </span>
+              <Toggle
+                ariaLabelledBy={`${switchId}-minimizetotray`}
+                checked={s.minimizeToTray}
+                onChange={(v) => {
+                  setCommandError(null);
+                  setFieldError(null);
+                  update({ ...s, minimizeToTray: v });
                 }}
               />
             </div>

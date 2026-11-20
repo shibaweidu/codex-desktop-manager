@@ -6,6 +6,10 @@ pub mod errors;
 
 mod state;
 
+#[cfg(test)]
+#[path = "../../crates/test-support/zip.rs"]
+mod zip_test;
+
 use std::sync::atomic::Ordering;
 
 use tauri::webview::PageLoadEvent;
@@ -56,6 +60,37 @@ fn quit_policy_for(app: &tauri::AppHandle) -> QuitPolicy {
 
 fn confirmed_quit_policy_for(app: &tauri::AppHandle) -> QuitPolicy {
     prepare_quit_policy_for(app, true)
+}
+
+fn minimize_to_tray_enabled() -> bool {
+    crate::app::settings_store::AppSettings::load().minimize_to_tray
+}
+
+fn hide_main_window(app: &tauri::AppHandle, reason: &str) {
+    let Some(window) = app.get_webview_window("main") else {
+        log::error!("main window hide failed reason={reason} error=window-missing");
+        return;
+    };
+    if let Err(error) = window.hide() {
+        log::warn!("main window hide failed reason={reason} error={error}");
+    } else {
+        log::info!("main window hidden reason={reason}");
+    }
+}
+
+/// Arms the same cancellation/force-exit latches as a confirmed quit, but only
+/// when no other operation holds the lease at all. A Manager relaunch is not
+/// consent to abandon a Codex download/update, so unlike
+/// `confirmed_quit_policy_for` an interruptible operation refuses it as busy.
+pub(crate) fn prepare_relaunch_for(
+    app: &tauri::AppHandle,
+) -> Result<(), crate::app::oplock::OperationError> {
+    let state = app.state::<state::ManagerState>();
+    state.operations.prepare_relaunch(|| {
+        let _ = crate::app::mac_update::cancel_macos_download();
+        let _ = crate::app::win_update::cancel_windows_download();
+        state.force_quit.store(true, Ordering::SeqCst);
+    })
 }
 
 /// Apply a quit policy decision for window/menu/exit paths.
@@ -523,10 +558,72 @@ fn install_macos_menu(app: &tauri::AppHandle, locale: NativeLocale) -> tauri::Re
     Ok(())
 }
 
+/// Create the resident tray entry used when closing the main window is
+/// configured to minimize it. The icon remains available when the setting is
+/// disabled so users can still restore the window or explicitly quit.
+fn install_tray(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+    let copy = NativeLocale::En.menu();
+    let show = MenuItem::with_id(app, "cam-tray-show", copy.tray_show, true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "cam-tray-quit", copy.tray_quit, true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+    let icon = app.default_window_icon().cloned().ok_or_else(|| {
+        tauri::Error::InvalidIcon(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "default application icon is unavailable",
+        ))
+    })?;
+
+    TrayIconBuilder::with_id("cam-tray")
+        .icon(icon)
+        .tooltip(PRODUCT_NAME)
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id().0.as_str() {
+            "cam-tray-show" => restore_main_window(app, "tray-menu-show"),
+            "cam-tray-quit" => {
+                restore_main_window(app, "tray-menu-quit");
+                let policy = quit_policy_for(app);
+                if apply_quit_policy(app, &policy) {
+                    app.exit(0);
+                }
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                restore_main_window(tray.app_handle(), "tray-click");
+            }
+        })
+        .build(app)?;
+    Ok(())
+}
+
+fn update_tray_menu(app: &tauri::AppHandle, locale: NativeLocale) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem};
+
+    let Some(tray) = app.tray_by_id("cam-tray") else {
+        log::warn!("tray menu update skipped: tray icon cam-tray is unavailable");
+        return Ok(());
+    };
+    let copy = locale.menu();
+    let show = MenuItem::with_id(app, "cam-tray-show", copy.tray_show, true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "cam-tray-quit", copy.tray_quit, true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+    tray.set_menu(Some(menu))
+}
+
 /// The frontend calls this only after both quit listeners are registered.
 /// The first handshake reveals the initially hidden window and drains any
-/// close/quit decisions queued during WebView startup. Later calls only update
-/// the native menu when the user changes the application language.
+/// close/quit decisions queued during WebView startup. Later calls update the
+/// native window and tray menus when the user changes the application language.
 #[tauri::command]
 fn frontend_ready(
     app: tauri::AppHandle,
@@ -546,6 +643,12 @@ fn frontend_ready(
         }
     };
     let locale = NativeLocale::from_tag(&lang);
+    if let Err(error) = update_tray_menu(&app, locale) {
+        log::warn!(
+            "tray menu update failed lang={} error={error}",
+            locale.code()
+        );
+    }
     #[cfg(target_os = "macos")]
     if let Err(error) = install_macos_menu(&app, locale) {
         log::warn!(
@@ -662,6 +765,41 @@ fn schedule_frontend_ready_fallback(app: tauri::AppHandle, generation: u64) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "windows")]
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|argument| argument == "--launch-codex")
+    {
+        let saved = app::settings_store::AppSettings::load();
+        let mut settings = domain::settings::AppSettings::new(String::new(), saved.install_root);
+        settings.disable_codex_self_updates = saved.disable_codex_self_updates;
+        settings.codex_launch_arguments = saved.codex_launch_arguments;
+        let result = (|| -> Result<(), errors::AppError> {
+            let lock_path = app::paths::data_dir()
+                .ok_or_else(|| errors::AppError::Internal("无法定位管理器数据目录".into()))?
+                .join("operation.lock");
+            let operations = app::oplock::OperationManager::new(lock_path);
+            let _guard = operations.begin(app::oplock::OperationKind::Adopt)?;
+            app::win_update::launch_codex(&settings)
+        })();
+        if let Err(error) = result {
+            use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR};
+            let text: Vec<u16> = format!("Codex 启动失败：{error}")
+                .encode_utf16()
+                .chain([0])
+                .collect();
+            let caption: Vec<u16> = "Codex App Manager".encode_utf16().chain([0]).collect();
+            unsafe {
+                MessageBoxW(
+                    std::ptr::null_mut(),
+                    text.as_ptr(),
+                    caption.as_ptr(),
+                    MB_ICONERROR,
+                );
+            }
+        }
+        return;
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             log::info!(
@@ -692,38 +830,7 @@ pub fn run() {
                 request_main_window_attention(app, "single-instance-queued");
             }
         }))
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .targets([
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
-                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("codex-app-manager".to_string()),
-                    }),
-                ])
-                .level(if cfg!(debug_assertions) {
-                    log::LevelFilter::Debug
-                } else {
-                    log::LevelFilter::Info
-                })
-                .level_for("tao", log::LevelFilter::Warn)
-                .level_for("wry", log::LevelFilter::Warn)
-                .max_file_size(crate::app::logging::MAX_LOG_FILE_BYTES)
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
-                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .format(|out, message, record| {
-                    out.finish(format_args!(
-                        "[{}] [{}] [{}:{}] {}",
-                        record.level(),
-                        record.target(),
-                        record.file().unwrap_or("?"),
-                        record.line().unwrap_or(0),
-                        message
-                    ))
-                })
-                .build(),
-        )
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         // Launch-at-login support. Off by default — the user opts in from
         // Settings; we only register the plugin so the toggle can flip it.
@@ -743,6 +850,9 @@ pub fn run() {
             commands::mac_pick_existing_install,
             commands::mac_adopt_path,
             commands::mac_install,
+            commands::historical_release_catalog,
+            commands::historical_pick_local_package,
+            commands::mac_install_historical_release,
             commands::mac_pause_download,
             commands::mac_cancel_download,
             commands::mac_discard_download,
@@ -750,7 +860,11 @@ pub fn run() {
             commands::mac_uninstall,
             commands::manager_check_update,
             commands::manager_install_update,
+            commands::manager_get_update_runtime,
+            commands::manager_ack_update_runtime,
+            commands::manager_relaunch,
             commands::get_settings,
+            commands::get_settings_strict,
             commands::set_settings,
             commands::get_config_health,
             commands::restore_config_backup,
@@ -760,6 +874,7 @@ pub fn run() {
             commands::arm_destructive,
             commands::end_operation,
             commands::get_operation_snapshot,
+            commands::get_paused_operation_snapshot,
             commands::get_operation_completion,
             commands::confirm_quit,
             commands::win_default_install_root,
@@ -799,13 +914,18 @@ pub fn run() {
             commands::win_adopt_path,
             commands::win_launch_codex,
             commands::win_perform_update,
+            commands::win_install_historical_release,
             commands::win_uninstall,
+            commands::get_host_architecture,
             commands::get_diagnostics,
+            commands::write_clipboard_text,
             commands::open_logs_dir,
             commands::open_codex_home,
             commands::log_frontend_error,
         ])
         .setup(|app| {
+            crate::app::logging::install(app.handle())?;
+            install_tray(app)?;
             build_main_window(app)?;
             #[cfg(target_os = "macos")]
             install_macos_menu(app.handle(), NativeLocale::En)?;
@@ -855,6 +975,20 @@ pub fn run() {
                 // a crash mid config.toml mutation (or an unkept try-on left
                 // hot-imported) must resolve before theme ops reopen.
                 crate::app::codex_theme::recover_native_theme_on_startup();
+                #[cfg(target_os = "windows")]
+                {
+                    let policy_recovery =
+                        crate::app::msix_policy_tx::recover_pending_msix_policy_transitions();
+                    if policy_recovery.failed > 0 {
+                        log::warn!(
+                            "MSIX policy recovery finished scanned={} committed={} rolled_back={} failed={}",
+                            policy_recovery.scanned,
+                            policy_recovery.committed,
+                            policy_recovery.rolled_back,
+                            policy_recovery.failed
+                        );
+                    }
+                }
                 let recovery =
                     crate::app::install_tx::recover_pending_transactions(Some(&operations));
                 if recovery.failed > 0 || recovery.kept_manual > 0 {
@@ -939,6 +1073,10 @@ pub fn run() {
             match event.id().0.as_str() {
                 "cam-quit" => {
                     log::info!("menu quit requested id=cam-quit");
+                    // App-menu Quit can be invoked after the window was hidden
+                    // to the tray. Restore it before dispatching confirmation
+                    // or blocked-quit events so the frontend can show them.
+                    restore_main_window(app, "menu-quit");
                     let policy = quit_policy_for(app);
                     if apply_quit_policy(app, &policy) {
                         app.exit(0);
@@ -969,19 +1107,20 @@ pub fn run() {
                 _ => {}
             }
         })
-        // A normal "open it when you need it" app — NOT a menu-bar resident.
-        // Closing the window quits the process so nothing lingers in the
-        // background; the Dock icon is the only entry point, and login launch is
-        // an explicit, off-by-default opt-in (see Settings).
-        //
         // The window has no system chrome, so every window-close path — the
-        // in-app ✕, Alt+F4, the macOS window close — arrives here. Policy is
-        // phase-aware: point-of-no-return install steps block quit; otherwise
-        // the confirm_close setting may raise a dialog.
+        // in-app ✕, Alt+F4, and the macOS window close — arrives here. When
+        // minimize_to_tray is enabled, the close request hides the window and
+        // keeps the process available through the tray. Otherwise the
+        // phase-aware quit policy and confirm_close setting apply.
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
                 log::info!("window close requested label={}", window.label());
+                if minimize_to_tray_enabled() {
+                    hide_main_window(app, "window-close-to-tray");
+                    api.prevent_close();
+                    return;
+                }
                 let policy = quit_policy_for(app);
                 if apply_quit_policy(app, &policy) {
                     app.exit(0);

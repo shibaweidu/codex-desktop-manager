@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          installers=(src-tauri/target/release/bundle/nsis/*-setup.exe)
+          installers=(target/release/bundle/nsis/*-setup.exe)
           if [ "${#installers[@]}" -ne 1 ]; then
             echo "::error::expected one x64 NSIS installer, found ${#installers[@]}" >&2
             exit 1
@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $assets = "release-assets"
-          $bundle = "src-tauri/target/release/bundle/nsis"
+          $bundle = "target/release/bundle/nsis"
           New-Item -ItemType Directory -Force -Path $assets | Out-Null
           $files = @(
             Get-ChildItem "$bundle/*-setup.exe"

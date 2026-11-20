@@ -72,7 +72,7 @@ export function CodexLocaleButton({ disabled }: { disabled: boolean }) {
     <>
       <button
         type="button"
-        className="btn ghost codex-locale-button"
+        className="btn primary big codex-locale-button"
         onClick={(event) => {
           setSheetHost(event.currentTarget.closest(".pop"));
           setError(false);

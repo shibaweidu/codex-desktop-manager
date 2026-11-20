@@ -65,6 +65,7 @@ vi.mock("../../services/managerApi", async (importOriginal) => {
       macAdopt: vi.fn(),
       macAdoptPath: vi.fn(),
       macLaunch: vi.fn(),
+      codexLocaleStatus: vi.fn().mockResolvedValue({ enabled: false, phase: "off" }),
       macPauseDownload: vi.fn(),
       macCancelDownload: vi.fn(),
       macDiscardDownload: vi.fn(),

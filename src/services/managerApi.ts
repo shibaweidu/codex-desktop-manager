@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
+export type CodexLocaleStatus = {
+  enabled: boolean;
+  phase: "off" | "pending" | "active" | "restoring" | "failed";
+};
+
 import type {
   AncillaryRetryReport,
   AncillaryRetryRequest,
@@ -1117,7 +1122,18 @@ export const managerApi = {
     if (!hasTauriRuntime()) {
       return Promise.resolve();
     }
-    return invoke<void>("mac_launch_codex");
+    return invoke<void>("mac_launch_codex").finally(notifyCodexLocaleChanged);
+  },
+  codexLocaleStatus(): Promise<CodexLocaleStatus> {
+    return hasTauriRuntime()
+      ? invoke<CodexLocaleStatus>("codex_locale_status")
+      : Promise.resolve({ enabled: false, phase: "off" });
+  },
+  configureCodexLocale(enabled: boolean, restart: boolean): Promise<CodexLocaleStatus> {
+    if (!hasTauriRuntime()) {
+      return Promise.resolve({ enabled, phase: enabled ? "pending" : "off" });
+    }
+    return invoke<CodexLocaleStatus>("codex_locale_configure", { enabled, restart });
   },
   // Open an external URL in the system browser (a webview <a target=_blank> is a
   // no-op under Tauri).
@@ -1646,9 +1662,13 @@ export const managerApi = {
     if (!hasTauriRuntime()) {
       return Promise.resolve();
     }
-    return invoke<void>("win_launch_codex");
+    return invoke<void>("win_launch_codex").finally(notifyCodexLocaleChanged);
   },
 };
+
+function notifyCodexLocaleChanged() {
+  window.dispatchEvent(new Event("cam:codex-locale-changed"));
+}
 
 function managerUpdateAvailable(
   update: ManagerUpdateMetadata,

@@ -65,6 +65,7 @@ vi.mock("../../services/managerApi", async (importOriginal) => {
       winAdopt: vi.fn(),
       winAdoptPath: vi.fn(),
       winLaunch: vi.fn(),
+      codexLocaleStatus: vi.fn().mockResolvedValue({ enabled: false, phase: "off" }),
       winPauseDownload: vi.fn(),
       winCancelDownload: vi.fn(),
       winDiscardDownload: vi.fn(),

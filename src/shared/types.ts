@@ -6,6 +6,7 @@ export type OperationKind =
   | "uninstall"
   | "set-install-root"
   | "adopt"
+  | "launch-codex"
   | "manager-update";
 export type OperationToken = string;
 /** Lifecycle phase of a backend operation lease (mirrors Rust `OperationPhase`). */

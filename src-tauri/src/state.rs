@@ -33,6 +33,7 @@ pub struct ManagerState {
     pub frontend: FrontendGate,
     /// Codex UI theme orchestration (daemon handle + status).
     pub codex_theme: crate::app::codex_theme::ThemeService,
+    pub codex_locale: crate::app::codex_locale::LocaleService,
     /// Real download/install progress for the Manager's own self-update,
     /// shared across every renderer view (Home, WinHome, About) so a reload
     /// or a second window can reattach to the in-flight state instead of
@@ -98,6 +99,7 @@ impl ManagerState {
             config_health,
             frontend: FrontendGate::default(),
             codex_theme: crate::app::codex_theme::ThemeService::default(),
+            codex_locale: crate::app::codex_locale::LocaleService::default(),
             manager_update: ManagerUpdateRuntime::default(),
         }
     }

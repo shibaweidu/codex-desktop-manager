@@ -1808,7 +1808,8 @@ button.themecard-art:focus-visible {
   border-radius: var(--r-md);
   font-size: var(--fs-body);
 }
-.kaola-api-link {
+.kaola-api-link,
+.codex-locale-button {
   grid-column: 1 / -1;
 }
 .home-recheck {

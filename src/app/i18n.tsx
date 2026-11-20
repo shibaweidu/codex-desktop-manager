@@ -25,6 +25,19 @@ export type Lang =
 
 // Canonical copy lives here. zh-CN is the source of truth; en mirrors it.
 const ZH = {
+  "locale.button": "Codex 汉化",
+  "locale.active": "汉化已开启",
+  "locale.pending": "汉化待生效",
+  "locale.restoring": "待恢复语言",
+  "locale.failed": "汉化未应用",
+  "locale.enableBody": "启用 Codex 自带的简体中文界面。",
+  "locale.disableBody": "恢复开启汉化前的语言偏好。",
+  "locale.later": "稍后生效",
+  "locale.now": "立即启动或重启",
+  "locale.applying": "正在应用…",
+  "locale.disable": "关闭汉化",
+  "locale.enable": "开启汉化",
+  "locale.error": "语言设置未应用，可以重试。",
   "home.incompatible.title": "有更新，但当前系统不兼容",
   "home.incompatible.desc": "当前 macOS {current}；最新版要求 macOS {required} 或更高版本。",
   "home.incompatible.recommended": "当前清单中最新的兼容版本：{version}。可以保留已安装的兼容版本。",
@@ -476,6 +489,19 @@ type Key = keyof typeof ZH;
 export type TKey = Key;
 
 const EN: Record<Key, string> = {
+  "locale.button": "Codex language",
+  "locale.active": "Chinese enabled",
+  "locale.pending": "Chinese pending",
+  "locale.restoring": "Language restore pending",
+  "locale.failed": "Language not applied",
+  "locale.enableBody": "Use Codex’s built-in Simplified Chinese interface.",
+  "locale.disableBody": "Restore your previous Codex language preference.",
+  "locale.later": "Apply later",
+  "locale.now": "Start or restart now",
+  "locale.applying": "Applying…",
+  "locale.disable": "Turn off Chinese",
+  "locale.enable": "Turn on Chinese",
+  "locale.error": "The language setting could not be applied. Try again.",
   "home.incompatible.title": "Update available; macOS is unsupported",
   "home.incompatible.desc": "Current macOS: {current}. The latest release requires macOS {required} or later.",
   "home.incompatible.recommended": "Latest compatible version in this feed: {version}. You can keep your compatible installation.",
@@ -924,6 +950,19 @@ const EN: Record<Key, string> = {
 };
 
 const FR: Record<Key, string> = {
+  "locale.button": "Langue de Codex",
+  "locale.active": "Chinois activé",
+  "locale.pending": "Chinois en attente",
+  "locale.restoring": "Restauration en attente",
+  "locale.failed": "Langue non appliquée",
+  "locale.enableBody": "Utiliser l’interface intégrée en chinois simplifié.",
+  "locale.disableBody": "Rétablir la langue précédente de Codex.",
+  "locale.later": "Appliquer plus tard",
+  "locale.now": "Lancer ou relancer",
+  "locale.applying": "Application…",
+  "locale.disable": "Désactiver le chinois",
+  "locale.enable": "Activer le chinois",
+  "locale.error": "La langue n’a pas pu être appliquée. Réessayez.",
   "home.incompatible.title": "Mise à jour incompatible avec ce macOS",
   "home.incompatible.desc": "macOS actuel : {current}. La dernière version nécessite macOS {required} ou ultérieur.",
   "home.incompatible.recommended": "Dernière version compatible du flux : {version}. Vous pouvez conserver votre installation compatible.",
@@ -1372,6 +1411,19 @@ const FR: Record<Key, string> = {
 };
 
 const ZH_TW: Record<Key, string> = {
+  "locale.button": "Codex 漢化",
+  "locale.active": "漢化已開啟",
+  "locale.pending": "漢化待生效",
+  "locale.restoring": "等待恢復語言",
+  "locale.failed": "漢化未套用",
+  "locale.enableBody": "啟用 Codex 內建的簡體中文介面。",
+  "locale.disableBody": "恢復開啟漢化前的語言偏好。",
+  "locale.later": "稍後生效",
+  "locale.now": "立即啟動或重啟",
+  "locale.applying": "正在套用…",
+  "locale.disable": "關閉漢化",
+  "locale.enable": "開啟漢化",
+  "locale.error": "未能套用語言設定，請重試。",
   "home.incompatible.title": "有更新，但目前系統不相容",
   "home.incompatible.desc": "目前 macOS {current}；最新版需要 macOS {required} 或更新版本。",
   "home.incompatible.recommended": "目前清單中最新的相容版本：{version}。可以保留已安裝的相容版本。",
@@ -1831,6 +1883,19 @@ const ZH_TW: Record<Key, string> = {
 };
 
 const DE: Record<Key, string> = {
+  "locale.button": "Codex-Sprache",
+  "locale.active": "Chinesisch aktiv",
+  "locale.pending": "Chinesisch ausstehend",
+  "locale.restoring": "Wiederherstellung ausstehend",
+  "locale.failed": "Sprache nicht angewendet",
+  "locale.enableBody": "Die integrierte Oberfläche auf vereinfachtem Chinesisch verwenden.",
+  "locale.disableBody": "Die vorherige Codex-Sprache wiederherstellen.",
+  "locale.later": "Später anwenden",
+  "locale.now": "Jetzt (neu) starten",
+  "locale.applying": "Wird angewendet…",
+  "locale.disable": "Chinesisch deaktivieren",
+  "locale.enable": "Chinesisch aktivieren",
+  "locale.error": "Die Sprache konnte nicht angewendet werden. Erneut versuchen.",
   "home.incompatible.title": "Update verfügbar, macOS nicht unterstützt",
   "home.incompatible.desc": "Aktuelles macOS: {current}. Die neueste Version benötigt macOS {required} oder neuer.",
   "home.incompatible.recommended": "Neueste kompatible Version im Feed: {version}. Sie können Ihre kompatible Installation behalten.",
@@ -2290,6 +2355,19 @@ const DE: Record<Key, string> = {
 };
 
 const KO: Record<Key, string> = {
+  "locale.button": "Codex 언어",
+  "locale.active": "중국어 사용 중",
+  "locale.pending": "중국어 적용 대기",
+  "locale.restoring": "언어 복원 대기",
+  "locale.failed": "언어 적용 실패",
+  "locale.enableBody": "Codex의 기본 중국어 간체 화면을 사용합니다.",
+  "locale.disableBody": "이전 Codex 언어 설정을 복원합니다.",
+  "locale.later": "나중에 적용",
+  "locale.now": "지금 시작 또는 재시작",
+  "locale.applying": "적용 중…",
+  "locale.disable": "중국어 끄기",
+  "locale.enable": "중국어 켜기",
+  "locale.error": "언어를 적용하지 못했습니다. 다시 시도하세요.",
   "home.incompatible.title": "업데이트가 있지만 macOS가 호환되지 않음",
   "home.incompatible.desc": "현재 macOS: {current}. 최신 버전은 macOS {required} 이상이 필요합니다.",
   "home.incompatible.recommended": "목록에서 확인된 최신 호환 버전: {version}. 현재 호환 버전을 유지할 수 있습니다.",
@@ -2748,6 +2826,19 @@ const KO: Record<Key, string> = {
 };
 
 const JA: Record<Key, string> = {
+  "locale.button": "Codex の言語",
+  "locale.active": "中国語が有効",
+  "locale.pending": "中国語の適用待ち",
+  "locale.restoring": "言語の復元待ち",
+  "locale.failed": "言語を適用できませんでした",
+  "locale.enableBody": "Codex 内蔵の簡体字中国語を使います。",
+  "locale.disableBody": "以前の Codex の言語設定に戻します。",
+  "locale.later": "後で適用",
+  "locale.now": "今すぐ起動または再起動",
+  "locale.applying": "適用中…",
+  "locale.disable": "中国語を無効にする",
+  "locale.enable": "中国語を有効にする",
+  "locale.error": "言語設定を適用できませんでした。もう一度お試しください。",
   "home.incompatible.title": "更新がありますが、この macOS は非対応です",
   "home.incompatible.desc": "現在の macOS: {current}。最新版には macOS {required} 以降が必要です。",
   "home.incompatible.recommended": "配信一覧で確認できる最新の対応版: {version}。現在の対応版をそのまま使用できます。",
@@ -3187,6 +3278,19 @@ const JA: Record<Key, string> = {
 };
 
 const RU: Record<Key, string> = {
+  "locale.button": "Язык Codex",
+  "locale.active": "Китайский включён",
+  "locale.pending": "Ожидается включение",
+  "locale.restoring": "Ожидается восстановление",
+  "locale.failed": "Язык не применён",
+  "locale.enableBody": "Использовать встроенный интерфейс на упрощённом китайском.",
+  "locale.disableBody": "Восстановить прежний язык Codex.",
+  "locale.later": "Применить позже",
+  "locale.now": "Запустить или перезапустить",
+  "locale.applying": "Применение…",
+  "locale.disable": "Отключить китайский",
+  "locale.enable": "Включить китайский",
+  "locale.error": "Не удалось применить язык. Повторите попытку.",
   "home.incompatible.title": "Обновление несовместимо с этой macOS",
   "home.incompatible.desc": "Текущая macOS: {current}. Последней версии нужна macOS {required} или новее.",
   "home.incompatible.recommended": "Последняя совместимая версия в ленте: {version}. Можно сохранить установленную совместимую версию.",
@@ -3626,6 +3730,19 @@ const RU: Record<Key, string> = {
 };
 
 const AR: Record<Key, string> = {
+  "locale.button": "لغة Codex",
+  "locale.active": "الصينية مفعّلة",
+  "locale.pending": "تفعيل الصينية معلّق",
+  "locale.restoring": "استعادة اللغة معلّقة",
+  "locale.failed": "لم تُطبّق اللغة",
+  "locale.enableBody": "استخدم واجهة Codex المدمجة بالصينية المبسطة.",
+  "locale.disableBody": "استعد إعداد اللغة السابق في Codex.",
+  "locale.later": "التطبيق لاحقًا",
+  "locale.now": "ابدأ أو أعد التشغيل الآن",
+  "locale.applying": "جارٍ التطبيق…",
+  "locale.disable": "إيقاف الصينية",
+  "locale.enable": "تفعيل الصينية",
+  "locale.error": "تعذّر تطبيق إعداد اللغة. حاول مجددًا.",
   "home.incompatible.title": "يتوفر تحديث غير متوافق مع macOS الحالي",
   "home.incompatible.desc": "macOS الحالي: {current}. يتطلب أحدث إصدار macOS {required} أو أحدث.",
   "home.incompatible.recommended": "أحدث إصدار متوافق في القائمة: {version}. يمكنك الاحتفاظ بالتثبيت المتوافق الحالي.",
@@ -4065,6 +4182,19 @@ const AR: Record<Key, string> = {
 };
 
 const ES: Record<Key, string> = {
+  "locale.button": "Idioma de Codex",
+  "locale.active": "Chino activado",
+  "locale.pending": "Chino pendiente",
+  "locale.restoring": "Restauración pendiente",
+  "locale.failed": "Idioma sin aplicar",
+  "locale.enableBody": "Usa la interfaz integrada en chino simplificado.",
+  "locale.disableBody": "Restaura el idioma anterior de Codex.",
+  "locale.later": "Aplicar más tarde",
+  "locale.now": "Abrir o reiniciar ahora",
+  "locale.applying": "Aplicando…",
+  "locale.disable": "Desactivar chino",
+  "locale.enable": "Activar chino",
+  "locale.error": "No se pudo aplicar el idioma. Inténtalo de nuevo.",
   "home.incompatible.title": "Actualización incompatible con este macOS",
   "home.incompatible.desc": "macOS actual: {current}. La última versión requiere macOS {required} o posterior.",
   "home.incompatible.recommended": "Última versión compatible en esta lista: {version}. Puedes conservar la instalación compatible.",
@@ -4504,6 +4634,19 @@ const ES: Record<Key, string> = {
 };
 
 const PT_BR: Record<Key, string> = {
+  "locale.button": "Idioma do Codex",
+  "locale.active": "Chinês ativado",
+  "locale.pending": "Chinês pendente",
+  "locale.restoring": "Restauração pendente",
+  "locale.failed": "Idioma não aplicado",
+  "locale.enableBody": "Use a interface integrada em chinês simplificado.",
+  "locale.disableBody": "Restaure o idioma anterior do Codex.",
+  "locale.later": "Aplicar depois",
+  "locale.now": "Abrir ou reiniciar agora",
+  "locale.applying": "Aplicando…",
+  "locale.disable": "Desativar chinês",
+  "locale.enable": "Ativar chinês",
+  "locale.error": "Não foi possível aplicar o idioma. Tente novamente.",
   "home.incompatible.title": "Atualização incompatível com este macOS",
   "home.incompatible.desc": "macOS atual: {current}. A versão mais recente exige macOS {required} ou posterior.",
   "home.incompatible.recommended": "Versão compatível mais recente nesta lista: {version}. Pode manter a instalação compatível.",

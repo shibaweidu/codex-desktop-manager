@@ -885,6 +885,8 @@ pub fn run() {
             commands::set_autostart,
             commands::set_window_mode,
             commands::codex_theme_list,
+            commands::codex_locale_status,
+            commands::codex_locale_configure,
             commands::codex_theme_status,
             commands::codex_theme_try_on,
             commands::codex_theme_try_on_restart,

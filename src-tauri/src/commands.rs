@@ -1514,16 +1514,7 @@ pub async fn mac_launch_codex(state: State<'_, ManagerState>) -> Result<(), Comm
     if !cfg!(target_os = "macos") {
         return Err(AppError::UnsupportedPlatform.into());
     }
-    let settings = PersistedAppSettings::load();
-    if settings.codex_theme.is_some() && state.operations.snapshot().is_none() {
-        let themed =
-            crate::app::codex_theme::launch_with_active_theme(&state.codex_theme, &settings)
-                .await?;
-        if themed {
-            return Ok(());
-        }
-    }
-    crate::app::mac_update::launch_codex().map_err(Into::into)
+    launch_managed_codex(&state).await
 }
 
 /// macOS-only: fresh-install the latest Codex (full package) into /Applications.
@@ -2549,14 +2540,94 @@ pub fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), Command
 // needs a debuggable Codex; the apply path restarts Codex with the loopback
 // debug port and writes the native config.toml appearance sections.
 
-/// Refuse theme operations that restart Codex while an install/update holds
-/// the operation lock — a themed relaunch racing an updater's quit/swap would
-/// interleave two owners of the Codex process lifecycle.
-fn ensure_theme_may_restart_codex(state: &ManagerState) -> Result<(), CommandError> {
-    if state.operations.snapshot().is_some() {
-        return Err(AppError::Engine("有正在进行的操作，请稍后再试".to_string()).into());
+#[tauri::command]
+pub async fn codex_locale_status(
+    state: State<'_, ManagerState>,
+) -> Result<crate::app::codex_locale::LocaleStatus, CommandError> {
+    state.codex_locale.status().await.map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn codex_locale_configure(
+    state: State<'_, ManagerState>,
+    enabled: bool,
+    restart: bool,
+) -> Result<crate::app::codex_locale::LocaleStatus, CommandError> {
+    if !cfg!(any(target_os = "windows", target_os = "macos")) {
+        return Err(AppError::UnsupportedPlatform.into());
     }
-    Ok(())
+    let guard = restart
+        .then(|| state.operations.begin(OperationKind::LaunchCodex))
+        .transpose()
+        .map_err(AppError::from)?;
+    state.codex_locale.set_enabled(enabled).await?;
+    if guard.is_some() {
+        launch_codex_with_preferences(&state, true).await?;
+    }
+    codex_locale_status(state).await
+}
+
+async fn launch_managed_codex(state: &ManagerState) -> Result<(), CommandError> {
+    if state.operations.snapshot().is_none() {
+        match state.codex_locale.has_work().await {
+            Ok(true) => {
+                if let Ok(_guard) = state.operations.begin(OperationKind::LaunchCodex) {
+                    return launch_codex_with_preferences(state, false).await;
+                }
+            }
+            Ok(false) => {
+                let settings = PersistedAppSettings::load();
+                if settings.codex_theme.is_some() {
+                    if let Ok(_guard) = state.operations.begin(OperationKind::LaunchCodex) {
+                        if crate::app::codex_theme::launch_with_active_theme(
+                            &state.codex_theme,
+                            &settings,
+                        )
+                        .await?
+                        {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+            Err(error) => log::warn!("Codex locale preferences unavailable: {error}"),
+        }
+    }
+    launch_plain_codex(state).await
+}
+
+async fn launch_codex_with_preferences(
+    state: &ManagerState,
+    restart: bool,
+) -> Result<(), CommandError> {
+    let settings = PersistedAppSettings::load();
+    let launched = state
+        .codex_locale
+        .prepare_launch(restart, settings.disable_codex_self_updates)
+        .await?;
+    if crate::app::codex_theme::launch_with_active_theme(&state.codex_theme, &settings).await? {
+        if launched || restart {
+            if let Err(error) = state.codex_locale.after_themed_launch().await {
+                log::warn!("Codex locale preferences unavailable after theme launch: {error}");
+            }
+        }
+        return Ok(());
+    }
+    if launched {
+        return Ok(());
+    }
+    launch_plain_codex(state).await
+}
+
+async fn launch_plain_codex(state: &ManagerState) -> Result<(), CommandError> {
+    if !matches!(state.target.os, OperatingSystem::Windows) {
+        return crate::app::mac_update::launch_codex().map_err(Into::into);
+    }
+    let settings = windows_domain_settings_for_persisted(state);
+    tauri::async_runtime::spawn_blocking(move || crate::app::win_update::launch_codex(&settings))
+        .await
+        .map_err(|e| AppError::Internal(format!("join: {e}")))?
+        .map_err(Into::into)
 }
 
 #[tauri::command]
@@ -2591,12 +2662,15 @@ pub async fn codex_theme_try_on_restart(
     state: State<'_, ManagerState>,
     theme_ref: String,
 ) -> Result<crate::app::codex_theme::ThemeStatusReport, CommandError> {
-    ensure_theme_may_restart_codex(&state)?;
+    let _guard = begin_guard(&state, OperationKind::LaunchCodex)?;
     let settings = PersistedAppSettings::load();
     state
         .codex_theme
         .try_on_with_restart(&settings, &theme_ref)
         .await?;
+    if let Err(error) = state.codex_locale.after_themed_launch().await {
+        log::warn!("Codex locale preferences unavailable after theme preview: {error}");
+    }
     Ok(state.codex_theme.status(&settings).await)
 }
 
@@ -2635,7 +2709,7 @@ pub async fn codex_theme_apply(
     state: State<'_, ManagerState>,
     theme_ref: String,
 ) -> Result<crate::app::codex_theme::ThemeStatusReport, CommandError> {
-    ensure_theme_may_restart_codex(&state)?;
+    let _guard = begin_guard(&state, OperationKind::LaunchCodex)?;
     let settings = PersistedAppSettings::load();
     state
         .codex_theme
@@ -2645,6 +2719,9 @@ pub async fn codex_theme_apply(
     let mut updated = PersistedAppSettings::load();
     updated.codex_theme = Some(id);
     updated.save()?;
+    if let Err(error) = state.codex_locale.after_themed_launch().await {
+        log::warn!("Codex locale preferences unavailable after applying theme: {error}");
+    }
     Ok(state.codex_theme.status(&updated).await)
 }
 
@@ -2810,21 +2887,33 @@ pub fn codex_theme_open_store() -> Result<(), CommandError> {
 }
 
 /// Turn the theme off. `full` additionally restores the original config.toml
-/// appearance sections (restarting Codex plainly if it was running).
+/// appearance sections and restarts an already running Codex.
 #[tauri::command]
 pub async fn codex_theme_off(
     state: State<'_, ManagerState>,
     full: bool,
 ) -> Result<crate::app::codex_theme::ThemeStatusReport, CommandError> {
     if full {
-        ensure_theme_may_restart_codex(&state)?;
-        state.codex_theme.off_full().await?;
+        let _guard = begin_guard(&state, OperationKind::LaunchCodex)?;
+        let disable_self_updates = PersistedAppSettings::load().disable_codex_self_updates;
+        let locale_launch = state
+            .codex_locale
+            .has_work()
+            .await
+            .unwrap_or(false)
+            .then_some(disable_self_updates);
+        let debuggable = state.codex_theme.off_full(locale_launch).await?;
         // Only the full restore clears the selection — off_live is a
         // session-scoped pause (SPEC §11): the native palette stays enabled
         // and the next themed launch re-injects.
         let mut settings = PersistedAppSettings::load();
         settings.codex_theme = None;
         settings.save()?;
+        if debuggable {
+            if let Err(error) = state.codex_locale.after_themed_launch().await {
+                log::warn!("Codex locale preferences unavailable after theme restore: {error}");
+            }
+        }
         return Ok(state.codex_theme.status(&settings).await);
     }
     state.codex_theme.turn_off_live().await?;
@@ -3116,20 +3205,7 @@ pub async fn win_launch_codex(state: State<'_, ManagerState>) -> Result<(), Comm
     if !matches!(state.target.os, OperatingSystem::Windows) {
         return Err(AppError::UnsupportedPlatform.into());
     }
-    let persisted = PersistedAppSettings::load();
-    if persisted.codex_theme.is_some() && state.operations.snapshot().is_none() {
-        let themed =
-            crate::app::codex_theme::launch_with_active_theme(&state.codex_theme, &persisted)
-                .await?;
-        if themed {
-            return Ok(());
-        }
-    }
-    let settings = windows_domain_settings_for_persisted(&state);
-    tauri::async_runtime::spawn_blocking(move || crate::app::win_update::launch_codex(&settings))
-        .await
-        .map_err(|e| AppError::Internal(format!("join: {e}")))?
-        .map_err(Into::into)
+    launch_managed_codex(&state).await
 }
 
 /// Windows-only: guarded execution. Requires explicit confirmation, stages and

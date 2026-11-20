@@ -23,6 +23,7 @@ pub enum OperationKind {
     Uninstall,
     SetInstallRoot,
     Adopt,
+    LaunchCodex,
     /// The Manager's own self-update (check-confirm-download-install), as
     /// distinct from a Codex `Update`. Holding this kind for the duration of
     /// `manager_install_update` keeps it from racing a concurrent Codex
@@ -39,6 +40,7 @@ impl OperationKind {
             Self::Uninstall => "uninstall",
             Self::SetInstallRoot => "set-install-root",
             Self::Adopt => "adopt",
+            Self::LaunchCodex => "launch-codex",
             Self::ManagerUpdate => "manager-update",
         }
     }

@@ -488,6 +488,19 @@ pub async fn ensure_api(session: &CdpSession, version_hint: Option<&str>) -> Res
     Ok(())
 }
 
+/// Read the locale through the same validated settings adapter used by the
+/// appearance controls. The host represents automatic language with null.
+pub async fn read_locale_override(
+    session: &CdpSession,
+    version_hint: Option<&str>,
+) -> Result<Option<String>> {
+    ensure_api(session, version_hint).await?;
+    let value = session
+        .evaluate(r#"window.__camThemeSettingsV1.read({ key: "localeOverride" })"#)
+        .await?;
+    serde_json::from_value(value).map_err(|error| err(format!("localeOverride: {error}")))
+}
+
 /// Read the five managed settings' live (effective) values.
 pub async fn read_snapshot(
     session: &CdpSession,

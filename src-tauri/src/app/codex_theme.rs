@@ -206,18 +206,18 @@ fn theme_supported() -> bool {
 /// other supported train, because an update can replace the installed app
 /// between detection and launch.
 #[cfg(target_os = "windows")]
-fn codex_version_hint() -> Option<String> {
+pub(super) fn codex_version_hint() -> Option<String> {
     installed_windows_codex().ok().map(|installed| installed.version)
 }
 
 #[cfg(target_os = "macos")]
-fn codex_version_hint() -> Option<String> {
+pub(super) fn codex_version_hint() -> Option<String> {
     crate::app::mac_update::detect_managed_installed()
         .map(|installed| installed.short_version)
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn codex_version_hint() -> Option<String> {
+pub(super) fn codex_version_hint() -> Option<String> {
     None
 }
 
@@ -1388,27 +1388,37 @@ impl ThemeService {
     /// Full restore (SPEC §11 off_full): live removal + quiesce Codex, put
     /// every managed unit back from the baseline under a transaction (an
     /// introduced key/section is deleted, the user's raw lines return
-    /// verbatim), relaunch plainly (no CDP port). The baseline is only
-    /// dropped after the restore commit verified.
-    pub async fn off_full(&self) -> Result<(), AppError> {
+    /// verbatim), then relaunch if Codex was running. Return whether that
+    /// relaunch has a debug connection for the independent locale setting.
+    pub async fn off_full(&self, locale_launch: Option<bool>) -> Result<bool, AppError> {
         if !theme_supported() {
             return Err(AppError::UnsupportedPlatform);
         }
         ensure_no_pending_tx()?;
         self.turn_off_live().await?;
-        tauri::async_runtime::spawn_blocking(move || -> Result<(), AppError> {
+        tauri::async_runtime::spawn_blocking(move || -> Result<bool, AppError> {
             let installed = installed_codex_path()?;
             let was_running = codex_running();
             quit_codex(&installed)?;
+            let relaunch = || {
+                if !was_running {
+                    return Ok(false);
+                }
+                if let Some(disable_self_updates) = locale_launch {
+                    match launch_codex_with_cdp(&installed, THEME_CDP_PORT, disable_self_updates) {
+                        Ok(()) => return Ok(true),
+                        Err(error) => log::warn!("Codex locale relaunch failed: {error}"),
+                    }
+                }
+                launch_codex_plain()?;
+                Ok(false)
+            };
             std::thread::sleep(CONFIG_SETTLE);
             let paths = native_paths()?;
             if !has_backup(&paths) {
                 // Nothing to restore — still honor the run state.
-                if was_running {
-                    launch_codex_plain()?;
-                }
                 remove_stash();
-                return Ok(());
+                return relaunch();
             }
             let root = tx_root()?;
             let mut tx = NativeTransaction::begin(BeginInput {
@@ -1447,10 +1457,7 @@ impl ThemeService {
                         .map_err(|e| AppError::Engine(e.to_string()))?;
                     tx.commit().map_err(|e| AppError::Engine(e.to_string()))?;
                     remove_stash();
-                    if was_running {
-                        launch_codex_plain()?;
-                    }
-                    Ok(())
+                    relaunch()
                 }
                 Err(error) => {
                     rollback_tx_to_preimage(tx, &paths, &error.to_string());
@@ -1629,6 +1636,26 @@ fn launch_codex_with_cdp(
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn launch_codex_plain() -> Result<(), AppError> {
     Err(AppError::UnsupportedPlatform)
+}
+
+/// Reuse the platform's debug launch without requiring a selected skin.
+pub(super) async fn start_for_locale(
+    restart: bool,
+    disable_self_updates: bool,
+) -> Result<bool, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if !restart && codex_running() {
+            return Ok(false);
+        }
+        let installed = installed_codex_path()?;
+        if restart {
+            quit_codex(&installed)?;
+        }
+        launch_codex_with_cdp(&installed, THEME_CDP_PORT, disable_self_updates)?;
+        Ok(true)
+    })
+    .await
+    .map_err(|error| AppError::Internal(format!("Codex 启动任务失败: {error}")))?
 }
 
 /// Launch hook for the ordinary 〔打开 Codex〕 action: when a theme is the

@@ -59,6 +59,7 @@ import {
 } from "./ManualExistingInstall";
 import { ProgressScreen, type PausedDownload } from "./ProgressScreen";
 import { KaoLaApiLink } from "../components/KaoLaApiLink";
+import { CodexLocaleButton } from "../components/CodexLocaleButton";
 import { useDownloadProgress } from "./useDownloadProgress";
 import { useFocusRecheck, installIdentity } from "./useFocusRecheck";
 import { useOperationReattach } from "./useOperationReattach";
@@ -1391,6 +1392,7 @@ function MacHome({
               </button>
             )
           ) : null}
+          {installed && <CodexLocaleButton disabled={busy !== null} />}
           <KaoLaApiLink />
         </div>
 
